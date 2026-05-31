@@ -14,20 +14,25 @@
   --danger: #d83f31;
   --warn: #e5a500;
   --ok: #1f9d55;
+  --blue: #1f6feb;
+  --shadow: 0 8px 26px rgba(0, 0, 0, 0.1);
+  --radius: 14px;
 }
 
 .dark {
-  --bg: #111318;
-  --bg2: #191f2a;
-  --card: #202936;
-  --ink: #f8f1e1;
-  --muted: #b7b3a8;
-  --line: #354357;
-  --accent: #3ecf8e;
-  --accent2: #ffa94d;
-  --danger: #ff6b6b;
-  --warn: #ffd166;
-  --ok: #63e6be;
+  --bg: #131313;
+  --bg2: #1a1a1a;
+  --card: #232323;
+  --ink: #f5f2e8;
+  --muted: #b7b09e;
+  --line: #3d3b36;
+  --accent: #3eb489;
+  --accent2: #ff9c4a;
+  --danger: #ff6b5e;
+  --warn: #f3c846;
+  --ok: #4fd68d;
+  --blue: #6fb0ff;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
 html,
@@ -35,10 +40,160 @@ body {
   min-height: 100%;
 }
 
-body {
+body,
+.app-shell {
   background:
-    radial-gradient(circle at 8% 8%, rgba(62, 207, 142, 0.15), transparent 30%),
-    radial-gradient(circle at 95% 95%, rgba(224, 122, 39, 0.14), transparent 33%),
+    radial-gradient(circle at 8% 6%, rgba(19, 121, 91, 0.12), transparent 30%),
+    radial-gradient(circle at 94% 94%, rgba(224, 122, 39, 0.12), transparent 32%),
     linear-gradient(180deg, var(--bg), var(--bg2));
+}
+
+body {
   color: var(--ink);
+  font-family: "Bricolage Grotesque", var(--font-bricolage), sans-serif;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.rounded-xl.border {
+  box-shadow: var(--shadow);
+}
+
+.app-nav {
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.app-brand {
+  color: var(--accent);
+  font-family: "Permanent Marker", var(--font-marker), cursive;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+}
+
+.app-tabs {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.app-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.app-tab {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+
+.app-tab-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.status-main {
+  border-width: 2px;
+}
+
+.status-main.status-lagging {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
+.status-main.status-on-track {
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+}
+
+.status-main.status-ahead {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+
+.status-option.status-lagging-active {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.status-option.status-on-track-active {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.status-option.status-ahead-active {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.timer-phase {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+}
+
+.timer-display {
+  font-size: clamp(54px, 13vw, 106px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.timer-display.focus {
+  color: var(--accent);
+}
+
+.timer-display.break {
+  color: var(--blue);
+}
+
+.timer-display.pause {
+  color: var(--warn);
+}
+
+.timer-ring {
+  height: min(330px, 86vw);
+  margin: 0 auto 14px;
+  position: relative;
+  width: min(330px, 86vw);
+}
+
+.timer-ring svg {
+  height: 100%;
+  transform: rotate(-90deg);
+  width: 100%;
+}
+
+.timer-ring circle {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 10;
+}
+
+.timer-ring-bg {
+  stroke: color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.timer-ring-fg {
+  stroke: var(--accent);
+  transition: stroke-dashoffset 0.2s linear;
+}
+
+.timer-ring-fg.break {
+  stroke: var(--blue);
+}
+
+.timer-ring-fg.pause {
+  stroke: var(--warn);
+}
+
+.timer-ring-center {
+  display: grid;
+  inset: 0;
+  place-items: center;
+  position: absolute;
 }

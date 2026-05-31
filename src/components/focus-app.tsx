@@ -278,6 +278,18 @@ export function FocusApp() {
   ];
 
   const selectedUnit = AP_UNITS.find((u) => u.id === state.selectedUnitId) ?? AP_UNITS[0];
+  const statusTone =
+    statusKey === "lagging"
+      ? "status-lagging"
+      : statusKey === "onTrack"
+        ? "status-on-track"
+        : "status-ahead";
+  const timerTotal = phaseDurationSeconds(state);
+  const timerPct = Math.max(0, Math.min(1, state.timer.secondsLeft / timerTotal));
+  const timerCircumference = 2 * Math.PI * 120;
+  const timerOffset = timerCircumference * (1 - timerPct);
+  const timerModeClass = state.timer.running ? (state.timer.phase === "focus" ? "focus" : "break") : "pause";
+  const timerRingClass = state.timer.phase === "break" ? "break" : timerModeClass === "pause" ? "pause" : "";
 
   const go = (screen: ScreenId) => setState((s) => ({ ...s, screen }));
 
@@ -374,50 +386,53 @@ export function FocusApp() {
   }
 
   return (
-    <main className={state.darkMode ? "dark min-h-screen" : "min-h-screen"}>
+    <main className={state.darkMode ? "app-shell dark min-h-screen" : "app-shell min-h-screen"}>
       <div className="mx-auto max-w-6xl px-4 pb-24 pt-4">
         <header
-          className="sticky top-2 z-10 mb-4 flex flex-wrap items-center gap-2 rounded-xl border p-3"
-          style={{ borderColor: "var(--line)", background: "var(--card)" }}
+          className="app-nav sticky top-2 z-10 mb-4 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border p-3"
+          style={{ borderColor: "var(--line)" }}
         >
-          <div className="mr-2 text-xl font-black">APBioFocus</div>
-          {screens.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => go(tab.id)}
-              className="rounded-full border px-3 py-1 text-xs font-bold"
-              style={{
-                borderColor: "var(--line)",
-                background: state.screen === tab.id ? "var(--accent)" : "transparent",
-                color: state.screen === tab.id ? "#fff" : "var(--ink)"
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="app-brand">APBioFocus</div>
+          <div className="min-w-0">
+            <div className="app-tabs [&::-webkit-scrollbar]:hidden">
+              {screens.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => go(tab.id)}
+                  className={`app-tab rounded-full px-3 py-1 text-xs font-bold ${state.screen === tab.id ? "app-tab-active" : ""}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-self-end gap-2">
             <button
               onClick={() => setState((s) => ({ ...s, darkMode: !s.darkMode }))}
               className="rounded-full border px-3 py-1 text-xs font-bold"
-              style={{ borderColor: "var(--line)" }}
+              style={{ borderColor: "var(--line)", background: "var(--card)" }}
             >
               {state.darkMode ? "Light" : "Dark"}
             </button>
             {userEmail ? (
               <>
-                <span className="text-xs" style={{ color: "var(--muted)" }}>
+                <span className="max-w-32 truncate text-xs" style={{ color: "var(--muted)" }}>
                   {userEmail}
                 </span>
                 <button
                   onClick={signOut}
                   className="rounded-full border px-3 py-1 text-xs font-bold"
-                  style={{ borderColor: "var(--line)" }}
+                  style={{ borderColor: "var(--line)", background: "var(--card)" }}
                 >
                   Sign out
                 </button>
               </>
             ) : (
-              <a href="/login" className="rounded-full border px-3 py-1 text-xs font-bold" style={{ borderColor: "var(--line)" }}>
+              <a
+                href="/login"
+                className="rounded-full border px-3 py-1 text-xs font-bold"
+                style={{ borderColor: "var(--line)", background: "var(--card)" }}
+              >
                 Sign in
               </a>
             )}
@@ -426,7 +441,7 @@ export function FocusApp() {
 
         {state.screen === "dashboard" && (
           <section className="space-y-3">
-            <div className="rounded-xl border p-4" style={{ borderColor: "var(--line)", background: "var(--card)" }}>
+            <div className={`status-main ${statusTone} rounded-xl border p-4`}>
               <div className="text-xs font-extrabold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
                 Current Status
               </div>
@@ -440,17 +455,14 @@ export function FocusApp() {
               </div>
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 {[
-                  { key: "lagging", label: "Lagging" },
-                  { key: "onTrack", label: "On Track" },
-                  { key: "ahead", label: "Ahead" }
+                  { key: "lagging", label: "Lagging", tone: "status-lagging-active" },
+                  { key: "onTrack", label: "On Track", tone: "status-on-track-active" },
+                  { key: "ahead", label: "Ahead", tone: "status-ahead-active" }
                 ].map((option) => (
                   <div
                     key={option.key}
-                    className="rounded-lg border p-2 text-center text-sm font-black"
-                    style={{
-                      borderColor: statusKey === option.key ? "var(--accent)" : "var(--line)",
-                      color: statusKey === option.key ? "var(--accent)" : "var(--muted)"
-                    }}
+                    className={`status-option rounded-lg border p-2 text-center text-sm font-black ${statusKey === option.key ? option.tone : ""}`}
+                    style={{ borderColor: statusKey === option.key ? undefined : "var(--line)", color: statusKey === option.key ? undefined : "var(--muted)" }}
                   >
                     {option.label}
                   </div>
@@ -655,10 +667,23 @@ export function FocusApp() {
 
         {state.screen === "timer" && (
           <section className="rounded-xl border p-5 text-center" style={{ borderColor: "var(--line)", background: "var(--card)" }}>
-            <div className="text-xs font-extrabold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
-              {state.timer.phase === "focus" ? "Focus Block" : "Break Block"}
+            <div className="timer-phase">{state.timer.phase === "focus" ? "Focus Block" : "Break Block"}</div>
+            <div className="timer-ring">
+              <svg viewBox="0 0 260 260" aria-hidden="true">
+                <circle className="timer-ring-bg" cx="130" cy="130" r="120" strokeDasharray={timerCircumference} strokeDashoffset={0} />
+                <circle
+                  className={`timer-ring-fg ${timerRingClass}`.trim()}
+                  cx="130"
+                  cy="130"
+                  r="120"
+                  strokeDasharray={timerCircumference}
+                  strokeDashoffset={timerOffset}
+                />
+              </svg>
+              <div className="timer-ring-center">
+                <div className={`timer-display ${timerModeClass}`}>{formatClock(state.timer.secondsLeft)}</div>
+              </div>
             </div>
-            <div className="mt-3 text-7xl font-black tabular-nums">{formatClock(state.timer.secondsLeft)}</div>
             <div className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
               {state.timer.phase === "focus" ? "25-minute pomodoro" : "Break does not count toward study time"}
             </div>
