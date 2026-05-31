@@ -203,8 +203,6 @@ export async function GET(req: NextRequest) {
   }
 
   const client = getAuthedClient(token);
-  if (!client) return null;
-
   if (!client) {
     return NextResponse.json({ error: "Missing Supabase env vars" }, { status: 500 });
   }
@@ -259,7 +257,7 @@ export async function POST(req: NextRequest) {
   const normalized = await writeNormalizedState(client, userId, body.state);
   if (normalized.error) {
     return NextResponse.json(
-      { error: normalized.error.message ?? "Failed writing normalized data" },
+      { error: typeof normalized.error === "string" ? normalized.error : normalized.error.message ?? "Failed writing normalized data" },
       { status: 500 }
     );
   }
