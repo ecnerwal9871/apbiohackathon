@@ -90,6 +90,19 @@ function dateDiffDays(a: Date, b: Date) {
   return Math.floor((a0 - b0) / 86400000);
 }
 
+function expectedChapterTarget() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const startYear = month >= 7 ? year : year - 1;
+  const start = new Date(startYear, 6, 1);
+  const exam = new Date(startYear + 1, 4, 10);
+  const totalDays = Math.max(1, Math.ceil((exam.getTime() - start.getTime()) / 86400000));
+  const elapsed = Math.max(0, Math.min(totalDays, Math.ceil((now.getTime() - start.getTime()) / 86400000)));
+  const ratio = elapsed / totalDays;
+  return Math.round(ratio * ALL_CHAPTERS.length);
+}
+
 function stateFromStorage(): AppState {
   if (typeof window === "undefined") return defaultState;
   try {
@@ -261,6 +274,7 @@ export function FocusApp() {
   const todaySeconds = state.dailyLog[dayKey()]?.focusSeconds ?? 0;
   const todayMinutes = Math.round(todaySeconds / 60);
   const currentGoal = goalForDate(state);
+  const expectedChapters = expectedChapterTarget();
   const streak = currentStreak(state);
 
   let statusKey: "lagging" | "onTrack" | "ahead" = "lagging";
@@ -268,12 +282,16 @@ export function FocusApp() {
   if (ratio >= 1) statusKey = "ahead";
   else if (ratio >= 0.8) statusKey = "onTrack";
 
+  const statusTitle = statusKey === "lagging" ? "Lagging" : statusKey === "onTrack" ? "On Track" : "Ahead";
+  const statusMotivation =
+    statusKey === "lagging" ? "Add one more block." : statusKey === "onTrack" ? "Keep going." : "Great pace.";
+
   const screens: { id: ScreenId; label: string }[] = [
     { id: "dashboard", label: "Dashboard" },
     { id: "curriculum", label: "Curriculum" },
-    { id: "calendar", label: "Plan" },
-    { id: "timer", label: "Focus" },
-    { id: "stats", label: "Stats" },
+    { id: "calendar", label: "Plan Calendar" },
+    { id: "timer", label: "Focus Timer" },
+    { id: "stats", label: "Stats and History" },
     { id: "settings", label: "Settings" }
   ];
 
@@ -443,78 +461,95 @@ export function FocusApp() {
           <section className="space-y-3">
             <div className={`status-main ${statusTone} rounded-xl border p-4`}>
               <div className="text-xs font-extrabold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
-                Current Status
+                CURRENT STATUS
               </div>
-              <div className="mt-2 text-2xl font-black">
-                {statusKey === "lagging" && "Lagging"}
-                {statusKey === "onTrack" && "On Track"}
-                {statusKey === "ahead" && "Ahead"}
+              <div className="mt-2 text-base font-black sm:text-lg">
+                {statusTitle}: {todayMinutes} / {currentGoal} min today. {statusMotivation}
               </div>
-              <div className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-                {todayMinutes}/{currentGoal} minutes today
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                {[
-                  { key: "lagging", label: "Lagging", tone: "status-lagging-active" },
-                  { key: "onTrack", label: "On Track", tone: "status-on-track-active" },
-                  { key: "ahead", label: "Ahead", tone: "status-ahead-active" }
-                ].map((option) => (
-                  <div
-                    key={option.key}
-                    className={`status-option rounded-lg border p-2 text-center text-sm font-black ${statusKey === option.key ? option.tone : ""}`}
-                    style={{ borderColor: statusKey === option.key ? undefined : "var(--line)", color: statusKey === option.key ? undefined : "var(--muted)" }}
-                  >
-                    {option.label}
-                  </div>
-                ))}
-              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-3">
+              {[
+                { key: "lagging", label: "Lagging", tone: "status-lagging-active" },
+                { key: "onTrack", label: "On Track", tone: "status-on-track-active" },
+                { key: "ahead", label: "Ahead", tone: "status-ahead-active" }
+              ].map((option) => (
+                <div
+                  key={option.key}
+                  className={`status-option rounded-lg border p-2 text-center text-sm font-black ${statusKey === option.key ? option.tone : ""}`}
+                  style={{ borderColor: statusKey === option.key ? undefined : "var(--line)", color: statusKey === option.key ? undefined : "var(--muted)" }}
+                >
+                  {option.label}
+                </div>
+              ))}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard label="Today Focus" value={minutesText(todayMinutes)} sub={`Goal ${minutesText(currentGoal)}`} />
-              <StatCard label="Streak" value={`${streak}`} sub="Consecutive days" />
-              <StatCard label="Chapter Progress" value={`${chapterProgress.done}/${chapterProgress.total}`} sub={`${chapterProgress.pct}% complete`} />
+              <StatCard label="Streak" value={`${streak}`} sub="Consecutive study days" />
+              <StatCard label="Chapters Done" value={`${chapterProgress.done}/${chapterProgress.total}`} sub={`Overall ${chapterProgress.pct}%`} />
               <StatCard
-                label="Total Focus"
+                label="Total Focus Time"
                 value={minutesText(Math.round(totalFocusSeconds(state) / 60))}
-                sub="Break time excluded"
+                sub="Tracked focus minutes only"
               />
             </div>
 
-            <div className="rounded-xl border p-4" style={{ borderColor: "var(--line)", background: "var(--card)" }}>
+            <div
+              className="rounded-xl border p-4"
+              style={{ borderColor: "var(--line)", background: "var(--card)", boxShadow: "var(--shadow)" }}
+            >
               <div className="flex items-center justify-between">
                 <div className="text-xs font-extrabold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
-                  Daily Checklist
+                  Curriculum Progress by Chapters
                 </div>
                 <div className="text-xs" style={{ color: "var(--muted)" }}>
-                  {Object.values(state.checklist).filter(Boolean).length}/{DAILY_TASKS.length}
+                  Expected by now: {expectedChapters} chapters
                 </div>
               </div>
-              <div className="mt-2 space-y-2">
-                {DAILY_TASKS.map((task, idx) => (
-                  <label key={task} className="flex cursor-pointer items-center gap-2 rounded-lg border p-2" style={{ borderColor: "var(--line)" }}>
-                    <input
-                      type="checkbox"
-                      checked={!!state.checklist[idx]}
-                      onChange={() =>
-                        setState((s) => ({ ...s, checklist: { ...s.checklist, [idx]: !s.checklist[idx] } }))
-                      }
-                    />
-                    <span>{task}</span>
-                  </label>
-                ))}
+              <div
+                className="mt-2 h-2.5 overflow-hidden rounded-full"
+                style={{ background: "color-mix(in srgb, var(--line) 70%, transparent)" }}
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${chapterProgress.pct}%`, background: "linear-gradient(90deg, var(--accent), var(--accent2))" }}
+                />
               </div>
-              <div className="mt-3 flex gap-2">
-                <button onClick={() => go("timer")} className="rounded-lg border px-4 py-2 text-sm font-bold" style={{ borderColor: "var(--line)", background: "var(--accent)", color: "#fff" }}>
-                  Start Focus
-                </button>
-                <button onClick={syncCloud} className="rounded-lg border px-4 py-2 text-sm font-bold" style={{ borderColor: "var(--line)" }}>
-                  Sync Cloud
-                </button>
-                <button onClick={loadCloud} className="rounded-lg border px-4 py-2 text-sm font-bold" style={{ borderColor: "var(--line)" }}>
-                  Load Cloud
-                </button>
-              </div>
+            </div>
+
+            <div className="mb-2 mt-4 text-sm font-extrabold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+              Daily Checklist ({Object.values(state.checklist).filter(Boolean).length}/{DAILY_TASKS.length})
+            </div>
+            <div className="space-y-2">
+              {DAILY_TASKS.map((task, idx) => (
+                <label
+                  key={task}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border p-3"
+                  style={{ borderColor: "var(--line)", background: "var(--card)" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!state.checklist[idx]}
+                    onChange={() =>
+                      setState((s) => ({ ...s, checklist: { ...s.checklist, [idx]: !s.checklist[idx] } }))
+                    }
+                  />
+                  <span>{task}</span>
+                </label>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => go("timer")}
+                className="btn primary rounded-lg border px-4 py-2 text-sm font-bold"
+                style={{ borderColor: "var(--line)", background: "var(--accent)", color: "#fff" }}
+              >
+                Start Focus Timer
+              </button>
+              <button onClick={() => go("curriculum")} className="rounded-lg border px-4 py-2 text-sm font-bold" style={{ borderColor: "var(--line)" }}>
+                Open Full Topic List
+              </button>
             </div>
           </section>
         )}
